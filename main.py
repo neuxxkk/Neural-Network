@@ -66,14 +66,10 @@ LEARNING_FACTOR = 0.3
 #Instance
 n = neuralNetwork(INPUT_NODES, HIDDEN_NODES, OUTPUT_NODES, LEARNING_FACTOR)
 
-train_file = open("/home/vitornms/100-train.csv")
-test_file = open("/home/vitornms/test.csv")
+train_file = open("train-100.csv")
 
 plot_numb = []
 tests = []
-
-l1 = np.asfarray(test_file.readlines()[5].split(',')[1:])
-
 
 for case in train_file.readlines():
     # transform text line (CSV) into number in matrix 28x28 (784 pixels)
@@ -92,12 +88,21 @@ for case in train_file.readlines():
     #training
     n.train(inputs, targets)
 
+
+# Testing
+test_file = open("test-10.csv")
+
+# reading testes
+l1 = np.asfarray(test_file.readlines()[5].split(',')[1:])
+
+#plotting chosen number
 plt.imshow(l1.reshape(28,28), cmap='Greys')
 plt.show()
 
+#showing Network
 answer = n.query((np.asfarray(l1) / 255 * 0.99) + 0.01, True)
 
+# SHOW ANSWER
 print(answer)
-
 print("The number is: ", np.argmax(answer))
 
