@@ -71,7 +71,7 @@ OUTPUT_NODES = 10
 HIDDEN_NODES = 200
 
 #learn factor
-LEARNING_FACTOR = 0.01
+LEARNING_FACTOR = 0.1
 
 #Discount Factor
 DISCOUNT_FACTOR = .0
@@ -80,6 +80,8 @@ DISCOUNT_FACTOR = .0
 n = neuralNetwork(INPUT_NODES, HIDDEN_NODES, OUTPUT_NODES, LEARNING_FACTOR)
 
 train_file = open("train-1000.csv")
+train_lines = train_file.readlines()
+train_file.close()
 
 plot_numb = []
 tests = []
@@ -87,9 +89,9 @@ tests = []
 epoch = 5
 
 for __ in range(epoch):
-    for case in train_file.readlines():
+    for case in train_lines:
         # transform text line (CSV) into number in matrix 28x28 (784 pixels)
-        matrix_n = np.asfarray(case.split(',')[1:])
+        matrix_n = np.asarray(case.split(',')[1:], dtype=float)
         plot_numb.append(matrix_n.reshape(28,28))
 
         # convert 0 - 255 into 0.01 -  1.00
@@ -99,7 +101,7 @@ for __ in range(epoch):
 
         # targets set
         targets = np.zeros(OUTPUT_NODES) + 0.01
-        targets[int(case[0])] = 0.99
+        targets[int(case.split(',')[0])] = 0.99
 
         #training
         #normal
@@ -132,14 +134,14 @@ while opt:
             idx = int(input("\nIndex: "))
 
             # reading testes sample 4
-            one_digit = np.asfarray(test_file.readlines()[idx].split(','))[1:]
+            one_digit = np.asarray(test_file.readlines()[idx].split(',')[1:], dtype=float)
 
             #plotting chosen number
             plt.imshow(one_digit.reshape(28,28), cmap='Greys')
             plt.show()
 
             #showing Network
-            answer = n.query((np.asfarray(one_digit) / 1 * 0.99) + 0.01, True)
+            answer = n.query((np.asarray(one_digit, dtype=float) / 1 * 0.99) + 0.01, True)
 
             # SHOW ANSWER
             #print(answer)
@@ -161,7 +163,7 @@ while opt:
                 # correct answer is first value
                 correct_label = int(all_values[0])
                 # scale and shift the inputs
-                inputs = (np.asfarray(all_values[1:]) / 255.0 * 0.99) + 0.01
+                inputs = (np.asarray(all_values[1:], dtype=float) / 255.0 * 0.99) + 0.01
                 # query the network
                 outputs = n.query(inputs)[1]
                 # the index of the highest value corresponds to the label
@@ -195,7 +197,7 @@ while opt:
             subprocess.run(['./draw_table/linux-amd64/draw_table'])
 
 
-            inputs = (np.asfarray(file_test.readline().split(',')) / 255 * 0.99) + 0.01
+            inputs = (np.asarray(file_test.readline().split(','), dtype=float) / 255 * 0.99) + 0.01
 
                         
             """             

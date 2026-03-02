@@ -1,0 +1,73 @@
+# Fix Neural Network: Always Predicting "2"
+
+A rede neural na interface web ([index.html](file:///c:/Users/FORMULA2/Neural-Network-1/index.html)) está identificando todos os números como o mesmo dígito (2) porque não possui pesos pré-treinados — ela inicia com pesos aleatórios toda vez que a página carrega. Além disso, há bugs no treinamento e na augmentação de dados.
+
+## Bugs Identificados
+
+1. **Sem pesos pré-treinados**: O [index.html](file:///c:/Users/FORMULA2/Neural-Network-1/index.html) cria a rede com pesos aleatórios e nunca carrega um `weights.json`. Resultado: sempre prediz o mesmo número.
+2. **Bug de epoch no [main.py](file:///c:/Users/FORMULA2/Neural-Network-1/main.py)**: `train_file.readlines()` é chamado dentro do loop de epochs (linha 90). Após a 1ª epoch, o cursor do arquivo está no fim e `readlines()` retorna lista vazia → treina apenas 1 epoch.
+3. **Sem augmentação real no HTML**: O treino no browser repete os mesmos dados 3x (linhas 670-674) ao invés de fazer rotações reais.
+4. **Learning rate baixo**: `0.01` é muito conservador para 1000 amostras.
+
+## Proposed Changes
+
+### Neural Network Core
+
+---
+
+#### [MODIFY] [export_weights.py](file:///c:/Users/FORMULA2/Neural-Network-1/export_weights.py)
+
+- Aumentar learning rate de `0.01` → `0.1`
+- Aumentar epochs de `5` → `7`
+- Fixar parsing do label com `int(case.split(',')[0])` ao invés de `int(case[0])`
+
+---
+
+#### [MODIFY] [main.py](file:///c:/Users/FORMULA2/Neural-Network-1/main.py)
+
+- **Fix epoch bug**: Ler `readlines()` antes do loop de epochs, salvar em variável
+- Aumentar learning rate de `0.01` → `0.1`
+- Fixar parsing do label com `int(case.split(',')[0])`
+
+---
+
+### Web Interface
+
+#### [MODIFY] [index.html](file:///c:/Users/FORMULA2/Neural-Network-1/index.html)
+
+**Correções de IA:**
+- Aumentar learning rate de `0.01` → `0.1`
+- Implementar rotações reais (+10°, -10°) no treino, usando transformação de imagem no canvas
+- Adicionar auto-load de `weights.json` ao iniciar a página
+- Adicionar shuffle dos dados de treino entre epochs
+- Melhorar o brush do drawing para produzir traços mais naturais/suaves (interpolação entre pontos)
+
+**Melhorias visuais:**
+- Adicionar animação de resultado ao classificar
+- Adicionar indicador de status da rede (treinada/não treinada)
+- Melhorar feedback visual durante treino com mais detalhes
+- Adicionar undo (desfazer último traço)
+- Melhorar responsividade mobile
+- Adicionar slider para brush size
+- Adicionar dark/light theme toggle
+
+---
+
+### Pre-trained Weights
+
+#### [NEW] Generate `weights.json`
+
+- Rodar [export_weights.py](file:///c:/Users/FORMULA2/Neural-Network-1/export_weights.py) (corrigido) para gerar `weights.json` com pesos pré-treinados
+- O [index.html](file:///c:/Users/FORMULA2/Neural-Network-1/index.html) vai carregar automaticamente esse arquivo
+
+## Verification Plan
+
+### Automated Tests
+1. Rodar `python export_weights.py` e verificar que `weights.json` é gerado sem erros
+2. Verificar que o arquivo `weights.json` contém arrays Wih (784×200) e Who (200×10)
+
+### Manual Verification
+1. Abrir [index.html](file:///c:/Users/FORMULA2/Neural-Network-1/index.html) no browser → verificar que os pesos são carregados automaticamente (status deve mostrar "Weights loaded")
+2. Desenhar dígitos 0-9 no canvas → verificar que a rede identifica corretamente (não mais sempre "2")
+3. Clicar "Re-train" → verificar que o treino completa e a precisão melhora
+4. Testar o drawing → verificar que o brush interpolado faz traços suaves

@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Digit Recognition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #00d4aa 0%, #00a8ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .network-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-bottom: 2rem;
+            transition: all 0.4s ease;
+        }
+
+        .network-status.untrained {
+            background: rgba(255, 107, 107, 0.15);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
+        }
+
+        .network-status.trained {
+            background: rgba(0, 212, 170, 0.15);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+            color: #00d4aa;
+        }
+
+        .network-status.loading {
+            background: rgba(0, 168, 255, 0.15);
+            border: 1px solid rgba(0, 168, 255, 0.3);
+            color: #00a8ff;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-dot.pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        .container {
+            display: flex;
+            gap: 3rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+            margin-bottom: 3rem;
+        }
+
+        .panel {
+            background: rgba(20, 20, 30, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .draw-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        #canvas {
+            width: 280px;
+            height: 280px;
+            border: 2px solid #00d4aa;
+            border-radius: 12px;
+            cursor: crosshair;
+            background: #1a1a24;
+            touch-action: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            align-self: center;
+        }
+
+        #canvas:hover {
+            border-color: #00e6bf;
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.15);
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+        }
+
+        .preview-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .preview-label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        #preview {
+            width: 56px;
+            height: 56px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .brush-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .brush-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .brush-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        .brush-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00d4aa;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .brush-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0);
+            transition: background 0.2s;
+        }
+
+        button:active::after {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: #00d4aa;
+            color: #0a0a0f;
+        }
+
+        .btn-primary:hover {
+            background: #00e6bf;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 212, 170, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-danger {
+            background: rgba(255, 107, 107, 0.15);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 107, 107, 0.25);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            flex: 0 0 auto;
+        }
+
+        .result-panel {
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .result-display {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .predicted-digit {
+            font-family: 'Syne', sans-serif;
+            font-size: 5rem;
+            font-weight: 700;
+            color: #00d4aa;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .predicted-digit.pop {
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            60% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .confidence {
+            font-size: 1.2rem;
+            color: #888;
+            transition: color 0.3s;
+        }
+
+        .confidence.high {
+            color: #00d4aa;
+        }
+
+        .confidence.medium {
+            color: #ffa64d;
+        }
+
+        .confidence.low {
+            color: #ff6b6b;
+        }
+
+        .low-confidence-warning {
+            font-size: 0.8rem;
+            color: #ff6b6b;
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .low-confidence-warning.show {
+            opacity: 1;
+        }
+
+        .confidence-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .bar-row.highlight {
+            transform: scale(1.02);
+        }
+
+        .bar-label {
+            width: 20px;
+            font-size: 0.9rem;
+            color: #888;
+            transition: color 0.3s;
+        }
+
+        .bar-label.top {
+            color: #00d4aa;
+            font-weight: 500;
+        }
+
+        .bar-container {
+            flex: 1;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: rgba(255, 255, 255, 0.15);
+            transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .bar-fill.top {
+            background: linear-gradient(90deg, #00d4aa 0%, #00e6bf 100%);
+            box-shadow: 0 0 10px rgba(0, 212, 170, 0.3);
+        }
+
+        .bar-value {
+            width: 50px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .training-panel {
+            width: 100%;
+            max-width: 680px;
+            margin-top: 1rem;
+        }
+
+        .training-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .training-status {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(0, 212, 170, 0.08);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 212, 170, 0.2);
+            display: none;
+        }
+
+        .training-status.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4aa, #00a8ff);
+            transition: width 0.3s ease;
+            width: 0%;
+            border-radius: 5px;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: #00d4aa;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .training-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .stat-value {
+            color: #00d4aa;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 1rem;
+            }
+
+            .container {
+                flex-direction: column;
+                align-items: center;
+                gap: 2rem;
+                margin-bottom: 2rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 1rem;
+                text-align: center;
+            }
+
+            .subtitle {
+                margin-bottom: 1.5rem;
+            }
+
+            .panel {
+                padding: 1.5rem;
+                width: 100%;
+                max-width: 380px;
+            }
+
+            #canvas {
+                width: min(280px, calc(100vw - 4rem));
+                height: min(280px, calc(100vw - 4rem));
+            }
+
+            .result-panel {
+                min-width: auto;
+            }
+
+            .training-panel {
+                max-width: 380px;
+                margin-top: 0;
+            }
+
+            .controls-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Neural Network Digit Classifier</h1>
+    <p class="subtitle">784→200→10 · Sigmoid · Manual Backprop</p>
+    <div class="network-status untrained" id="network-status">
+        <span class="status-dot pulse"></span>
+        <span id="status-label">Initializing...</span>
+    </div>
+
+    <div class="container">
+        <div class="panel draw-panel">
+            <canvas id="canvas" width="280" height="280"></canvas>
+            <div class="controls-row">
+                <div class="preview-section">
+                    <span class="preview-label">28×28 input:</span>
+                    <canvas id="preview" width="28" height="28"></canvas>
+                </div>
+                <div class="brush-control">
+                    <label class="brush-label" id="brush-label">Brush: 1.5</label>
+                    <input type="range" class="brush-slider" id="brush-size" min="0.5" max="2.5" step="0.1" value="1.5">
+                </div>
+            </div>
+            <div class="buttons">
+                <button class="btn-primary" id="classify">Classify</button>
+                <button class="btn-secondary" id="undo" title="Undo last stroke">↩</button>
+                <button class="btn-danger btn-small" id="clear">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel result-panel">
+            <div class="result-display">
+                <div class="predicted-digit" id="prediction">?</div>
+                <div class="confidence" id="confidence">—</div>
+                <div class="low-confidence-warning" id="warning">⚠️ Low confidence — try drawing more clearly</div>
+            </div>
+            <div class="confidence-bars" id="bars"></div>
+        </div>
+    </div>
+
+    <div class="panel training-panel">
+        <div class="training-header">
+            <h2 style="font-family: 'Syne', sans-serif;">Training</h2>
+        </div>
+        <div class="buttons">
+            <button class="btn-secondary" id="train">Re-train Network</button>
+            <button class="btn-secondary" id="export" disabled>Export Weights</button>
+        </div>
+        <div class="training-status" id="training-status">
+            <div class="status-text" id="status-text">Initializing...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="training-stats" id="training-stats"></div>
+        </div>
+    </div>
+
+    <script src="weights.js"></script>
+    <script>
+        // ============= NEURAL NETWORK =============
+        class NeuralNetwork {
+            constructor(inputNodes, hiddenNodes, outputNodes, learningRate) {
+                this.inputNodes = inputNodes;
+                this.hiddenNodes = hiddenNodes;
+                this.outputNodes = outputNodes;
+                this.lr = learningRate;
+
+                this.Wih = this.randomWeights(inputNodes, hiddenNodes, inputNodes);
+                this.Who = this.randomWeights(hiddenNodes, outputNodes, hiddenNodes);
+            }
+
+            randomWeights(rows, cols, fanIn) {
+                const weights = new Float32Array(rows * cols);
+                const stdDev = 1 / Math.sqrt(fanIn);
+                for (let i = 0; i < weights.length; i++) {
+                    const u1 = Math.random();
+                    const u2 = Math.random();
+                    weights[i] = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * stdDev;
+                }
+                return weights;
+            }
+
+            sigmoid(x) {
+                if (x < -500) return 0;
+                if (x > 500) return 1;
+                return 1 / (1 + Math.exp(-x));
+            }
+
+            forward(inputs) {
+                // inputs × Wih
+                const hiddenOutputs = new Float32Array(this.hiddenNodes);
+                for (let j = 0; j < this.hiddenNodes; j++) {
+                    let sum = 0;
+                    for (let i = 0; i < this.inputNodes; i++) {
+                        sum += inputs[i] * this.Wih[i * this.hiddenNodes + j];
+                    }
+                    hiddenOutputs[j] = this.sigmoid(sum);
+                }
+
+                // hidden × Who
+                const finalOutputs = new Float32Array(this.outputNodes);
+                for (let j = 0; j < this.outputNodes; j++) {
+                    let sum = 0;
+                    for (let i = 0; i < this.hiddenNodes; i++) {
+                        sum += hiddenOutputs[i] * this.Who[i * this.outputNodes + j];
+                    }
+                    finalOutputs[j] = this.sigmoid(sum);
+                }
+
+                return { hiddenOutputs, finalOutputs };
+            }
+
+            train(inputs, targets) {
+                const { hiddenOutputs, finalOutputs } = this.forward(inputs);
+
+                // Output errors
+                const outputErrors = new Float32Array(this.outputNodes);
+                for (let i = 0; i < this.outputNodes; i++) {
+                    outputErrors[i] = targets[i] - finalOutputs[i];
+                }
+
+                // Backprop to hidden
+                const hiddenErrors = new Float32Array(this.hiddenNodes);
+                for (let i = 0; i < this.hiddenNodes; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < this.outputNodes; j++) {
+                        sum += outputErrors[j] * this.Who[i * this.outputNodes + j];
+                    }
+                    hiddenErrors[i] = sum;
+                }
+
+                // Update Who
+                for (let i = 0; i < this.hiddenNodes; i++) {
+                    for (let j = 0; j < this.outputNodes; j++) {
+                        const gradient = outputErrors[j] * finalOutputs[j] * (1 - finalOutputs[j]);
+                        this.Who[i * this.outputNodes + j] += this.lr * hiddenOutputs[i] * gradient;
+                    }
+                }
+
+                // Update Wih
+                for (let i = 0; i < this.inputNodes; i++) {
+                    for (let j = 0; j < this.hiddenNodes; j++) {
+                        const gradient = hiddenErrors[j] * hiddenOutputs[j] * (1 - hiddenOutputs[j]);
+                        this.Wih[i * this.hiddenNodes + j] += this.lr * inputs[i] * gradient;
+                    }
+                }
+            }
+
+            loadWeights(Wih, Who) {
+                if (Array.isArray(Wih[0])) {
+                    // 2D array (from Python) → flatten row-major
+                    const flat = [];
+                    for (let i = 0; i < Wih.length; i++) {
+                        for (let j = 0; j < Wih[i].length; j++) {
+                            flat.push(Wih[i][j]);
+                        }
+                    }
+                    this.Wih = new Float32Array(flat);
+                } else {
+                    this.Wih = new Float32Array(Wih);
+                }
+
+                if (Array.isArray(Who[0])) {
+                    const flat = [];
+                    for (let i = 0; i < Who.length; i++) {
+                        for (let j = 0; j < Who[i].length; j++) {
+                            flat.push(Who[i][j]);
+                        }
+                    }
+                    this.Who = new Float32Array(flat);
+                } else {
+                    this.Who = new Float32Array(Who);
+                }
+            }
+
+            exportWeights() {
+                return {
+                    Wih: Array.from(this.Wih),
+                    Who: Array.from(this.Who)
+                };
+            }
+        }
+
+        // ============= IMAGE ROTATION & NORMALIZATION =============
+        function preProcessImage(inputGrid) {
+            // 1. Find Bounding Box
+            let minX = 28, maxX = -1, minY = 28, maxY = -1;
+            let hasPixels = false;
+            for (let y = 0; y < 28; y++) {
+                for (let x = 0; x < 28; x++) {
+                    if (inputGrid[y * 28 + x] > 0) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        hasPixels = true;
+                    }
+                }
+            }
+            if (!hasPixels) return new Float32Array(784);
+
+            let width = maxX - minX + 1;
+            let height = maxY - minY + 1;
+
+            // 2. Scale bounding box to fit inside 20x20
+            let scale = 20.0 / Math.max(width, height);
+            let scaledWidth = Math.round(width * scale);
+            let scaledHeight = Math.round(height * scale);
+
+            let scaledGrid = new Float32Array(28 * 28);
+
+            // Bilinear interpolation for scaling into scaledGrid
+            for (let y = 0; y < scaledHeight; y++) {
+                for (let x = 0; x < scaledWidth; x++) {
+                    let srcX = minX + (x / scale);
+                    let srcY = minY + (y / scale);
+
+                    let x0 = Math.floor(srcX);
+                    let y0 = Math.floor(srcY);
+                    let x1 = Math.min(x0 + 1, 27);
+                    let y1 = Math.min(y0 + 1, 27);
+                    let dx = srcX - x0;
+                    let dy = srcY - y0;
+
+                    let val = inputGrid[y0 * 28 + x0] * (1 - dx) * (1 - dy) +
+                        inputGrid[y0 * 28 + x1] * dx * (1 - dy) +
+                        inputGrid[y1 * 28 + x0] * (1 - dx) * dy +
+                        inputGrid[y1 * 28 + x1] * dx * dy;
+
+                    scaledGrid[y * 28 + x] = val;
+                }
+            }
+
+            // 3. Compute Center of Mass of the scaled image
+            let totalMass = 0;
+            let cx = 0, cy = 0;
+            for (let y = 0; y < scaledHeight; y++) {
+                for (let x = 0; x < scaledWidth; x++) {
+                    let mass = scaledGrid[y * 28 + x];
+                    if (mass > 0) {
+                        cx += x * mass;
+                        cy += y * mass;
+                        totalMass += mass;
+                    }
+                }
+            }
+
+            if (totalMass > 0) {
+                cx /= totalMass;
+                cy /= totalMass;
+            } else {
+                cx = scaledWidth / 2;
+                cy = scaledHeight / 2;
+            }
+
+            // 4. Translate so center of mass is exactly at 13.5, 13.5
+            let finalGrid = new Float32Array(784);
+            let shiftX = Math.round(13.5 - cx);
+            let shiftY = Math.round(13.5 - cy);
+
+            for (let y = 0; y < scaledHeight; y++) {
+                for (let x = 0; x < scaledWidth; x++) {
+                    let finalX = x + shiftX;
+                    let finalY = y + shiftY;
+                    if (finalX >= 0 && finalX < 28 && finalY >= 0 && finalY < 28) {
+                        finalGrid[finalY * 28 + finalX] = scaledGrid[y * 28 + x];
+                    }
+                }
+            }
+
+            return finalGrid;
+        }
+
+        function rotateImage(pixels28x28, angleDeg) {
+            const result = new Float32Array(784);
+            const rad = angleDeg * Math.PI / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const cx = 13.5, cy = 13.5;
+
+            for (let y = 0; y < 28; y++) {
+                for (let x = 0; x < 28; x++) {
+                    // Inverse rotation to find source pixel
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    const srcX = cos * dx + sin * dy + cx;
+                    const srcY = -sin * dx + cos * dy + cy;
+
+                    // Bilinear interpolation
+                    const x0 = Math.floor(srcX);
+                    const y0 = Math.floor(srcY);
+                    const x1 = x0 + 1;
+                    const y1 = y0 + 1;
+                    const fx = srcX - x0;
+                    const fy = srcY - y0;
+
+                    let val = 0.01; // Default (background)
+                    if (x0 >= 0 && x1 < 28 && y0 >= 0 && y1 < 28) {
+                        val = pixels28x28[y0 * 28 + x0] * (1 - fx) * (1 - fy)
+                            + pixels28x28[y0 * 28 + x1] * fx * (1 - fy)
+                            + pixels28x28[y1 * 28 + x0] * (1 - fx) * fy
+                            + pixels28x28[y1 * 28 + x1] * fx * fy;
+                    }
+                    result[y * 28 + x] = val;
+                }
+            }
+            return result;
+        }
+
+        // ============= GLOBAL STATE =============
+        let nn = new NeuralNetwork(784, 200, 10, 0.1);
+        let isDrawing = false;
+        let hasTrainedWeights = false;
+        let brushSize = 1.5;
+
+        // Stroke history for undo
+        let strokeHistory = [];
+        let currentStroke = [];
+
+        // ============= CANVAS SETUP =============
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const preview = document.getElementById('preview');
+        const previewCtx = preview.getContext('2d');
+
+        ctx.fillStyle = '#1a1a24';
+        ctx.fillRect(0, 0, 280, 280);
+        previewCtx.fillStyle = '#000';
+        previewCtx.fillRect(0, 0, 28, 28);
+
+        const grid = new Float32Array(28 * 28);
+
+        let lastPos = null;
+
+        function applyBrush(gx, gy, strength) {
+            const radius = brushSize;
+            const iRadius = Math.ceil(radius);
+
+            for (let dy = -iRadius; dy <= iRadius; dy++) {
+                for (let dx = -iRadius; dx <= iRadius; dx++) {
+                    const nx = gx + dx;
+                    const ny = gy + dy;
+                    if (nx < 0 || nx >= 28 || ny < 0 || ny >= 28) continue;
+
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > radius + 0.5) continue;
+
+                    // Smooth falloff
+                    const factor = Math.max(0, 1 - dist / (radius + 0.5));
+                    const alpha = strength * factor * factor;
+                    const idx = ny * 28 + nx;
+                    grid[idx] = Math.min(255, Math.max(grid[idx], alpha * 255));
+                }
+            }
+        }
+
+        function drawPixel(x, y) {
+            const scaleX = 28 / canvas.getBoundingClientRect().width;
+            const scaleY = 28 / canvas.getBoundingClientRect().height;
+            const gridX = x * scaleX;
+            const gridY = y * scaleY;
+
+            if (lastPos) {
+                // Interpolate between points for smooth lines
+                const dx = gridX - lastPos.x;
+                const dy = gridY - lastPos.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const steps = Math.max(1, Math.ceil(dist * 2));
+
+                for (let s = 0; s <= steps; s++) {
+                    const t = s / steps;
+                    const ix = lastPos.x + dx * t;
+                    const iy = lastPos.y + dy * t;
+                    applyBrush(Math.round(ix), Math.round(iy), 0.85);
+                    currentStroke.push({ x: Math.round(ix), y: Math.round(iy) });
+                }
+            } else {
+                applyBrush(Math.round(gridX), Math.round(gridY), 0.85);
+                currentStroke.push({ x: Math.round(gridX), y: Math.round(gridY) });
+            }
+
+            lastPos = { x: gridX, y: gridY };
+            renderCanvas();
+        }
+
+        function renderCanvas() {
+            // Render main canvas from grid
+            const imageData = ctx.createImageData(280, 280);
+            for (let y = 0; y < 28; y++) {
+                for (let x = 0; x < 28; x++) {
+                    const value = grid[y * 28 + x];
+                    // Scale each grid cell to 10x10 pixels
+                    for (let py = 0; py < 10; py++) {
+                        for (let px = 0; px < 10; px++) {
+                            const idx = ((y * 10 + py) * 280 + (x * 10 + px)) * 4;
+                            imageData.data[idx] = value;
+                            imageData.data[idx + 1] = value;
+                            imageData.data[idx + 2] = value;
+                            imageData.data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            // Update preview using normalized data
+            const normalizedGrid = preProcessImage(grid);
+            for (let y = 0; y < 28; y++) {
+                for (let x = 0; x < 28; x++) {
+                    const value = normalizedGrid[y * 28 + x];
+                    previewCtx.fillStyle = `rgb(${value}, ${value}, ${value})`;
+                    previewCtx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches) {
+                return {
+                    x: e.touches[0].clientX - rect.left,
+                    y: e.touches[0].clientY - rect.top
+                };
+            }
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            lastPos = null;
+            currentStroke = [];
+            strokeHistory.push(new Float32Array(grid)); // save state before stroke
+            drawPixel(getPos(e).x, getPos(e).y);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) drawPixel(getPos(e).x, getPos(e).y);
+        });
+
+        canvas.addEventListener('mouseup', () => { isDrawing = false; lastPos = null; });
+        canvas.addEventListener('mouseleave', () => { isDrawing = false; lastPos = null; });
+
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            lastPos = null;
+            currentStroke = [];
+            strokeHistory.push(new Float32Array(grid));
+            drawPixel(getPos(e).x, getPos(e).y);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isDrawing) drawPixel(getPos(e).x, getPos(e).y);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isDrawing = false;
+            lastPos = null;
+        });
+
+        // Brush size
+        const brushSlider = document.getElementById('brush-size');
+        const brushLabel = document.getElementById('brush-label');
+        brushSlider.addEventListener('input', (e) => {
+            brushSize = parseFloat(e.target.value);
+            brushLabel.textContent = `Brush: ${brushSize.toFixed(1)}`;
+        });
+
+        // ============= UNDO =============
+        document.getElementById('undo').addEventListener('click', () => {
+            if (strokeHistory.length > 0) {
+                const prevState = strokeHistory.pop();
+                grid.set(prevState);
+                renderCanvas();
+            }
+        });
+
+        // ============= CLASSIFICATION =============
+        document.getElementById('classify').addEventListener('click', () => {
+            const normalizedGrid = preProcessImage(grid);
+            const inputs = new Float32Array(784);
+            for (let i = 0; i < 784; i++) {
+                inputs[i] = (normalizedGrid[i] / 255.0 * 0.99) + 0.01;
+            }
+
+            const { finalOutputs } = nn.forward(inputs);
+
+            // Find prediction
+            let maxIdx = 0;
+            let maxVal = finalOutputs[0];
+            for (let i = 1; i < 10; i++) {
+                if (finalOutputs[i] > maxVal) {
+                    maxVal = finalOutputs[i];
+                    maxIdx = i;
+                }
+            }
+
+            const confidence = maxVal * 100;
+
+            // Animate prediction
+            const predEl = document.getElementById('prediction');
+            predEl.textContent = maxIdx;
+            predEl.classList.remove('pop');
+            void predEl.offsetWidth; // force reflow
+            predEl.classList.add('pop');
+
+            // Confidence color
+            const confEl = document.getElementById('confidence');
+            confEl.textContent = `${confidence.toFixed(1)}%`;
+            confEl.className = 'confidence';
+            if (confidence >= 80) confEl.classList.add('high');
+            else if (confidence >= 50) confEl.classList.add('medium');
+            else confEl.classList.add('low');
+
+            // Warning
+            const warning = document.getElementById('warning');
+            if (confidence < 50) {
+                warning.classList.add('show');
+            } else {
+                warning.classList.remove('show');
+            }
+
+            // Update bars
+            const barsContainer = document.getElementById('bars');
+            barsContainer.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const value = finalOutputs[i] * 100;
+                const isTop = i === maxIdx;
+                const row = document.createElement('div');
+                row.className = `bar-row${isTop ? ' highlight' : ''}`;
+                row.innerHTML = `
+                    <div class="bar-label${isTop ? ' top' : ''}">${i}</div>
+                    <div class="bar-container">
+                        <div class="bar-fill ${isTop ? 'top' : ''}" style="width: ${value}%"></div>
+                    </div>
+                    <div class="bar-value">${value.toFixed(1)}%</div>
+                `;
+                barsContainer.appendChild(row);
+            }
+        });
+
+        // ============= CLEAR =============
+        document.getElementById('clear').addEventListener('click', () => {
+            grid.fill(0);
+            strokeHistory = [];
+            lastPos = null;
+
+            ctx.fillStyle = '#1a1a24';
+            ctx.fillRect(0, 0, 280, 280);
+            previewCtx.fillStyle = '#000';
+            previewCtx.fillRect(0, 0, 28, 28);
+
+            document.getElementById('prediction').textContent = '?';
+            const confEl = document.getElementById('confidence');
+            confEl.textContent = '—';
+            confEl.className = 'confidence';
+            document.getElementById('warning').classList.remove('show');
+            document.getElementById('bars').innerHTML = '';
+            initBars();
+        });
+
+        // ============= TRAINING =============
+        document.getElementById('train').addEventListener('click', async () => {
+            const trainBtn = document.getElementById('train');
+            const exportBtn = document.getElementById('export');
+            const statusDiv = document.getElementById('training-status');
+            const statusText = document.getElementById('status-text');
+            const progressFill = document.getElementById('progress-fill');
+            const trainingStats = document.getElementById('training-stats');
+
+            trainBtn.disabled = true;
+            exportBtn.disabled = true;
+            statusDiv.classList.add('show');
+            statusText.textContent = 'Loading training data...';
+            progressFill.style.width = '0%';
+            trainingStats.innerHTML = '';
+
+            try {
+                const response = await fetch('train-1000.csv');
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+
+                const trainingData = lines.map(line => {
+                    const values = line.split(',').map(Number);
+                    return { label: values[0], pixels: values.slice(1) };
+                });
+
+                statusText.textContent = 'Training network (5 epochs with augmentation)...';
+
+                const epochs = 5;
+                const totalSamples = trainingData.length * epochs * 3;
+                let processedSamples = 0;
+                const startTime = performance.now();
+
+                // Reset network for fresh training
+                nn = new NeuralNetwork(784, 200, 10, 0.1);
+
+                for (let epoch = 0; epoch < epochs; epoch++) {
+                    // Shuffle training data each epoch
+                    const shuffled = [...trainingData];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+
+                    for (let i = 0; i < shuffled.length; i++) {
+                        const { label, pixels } = shuffled[i];
+
+                        const inputs = new Float32Array(784);
+                        for (let j = 0; j < 784; j++) {
+                            inputs[j] = (pixels[j] / 255.0 * 0.99) + 0.01;
+                        }
+
+                        const targets = new Float32Array(10);
+                        targets.fill(0.01);
+                        targets[label] = 0.99;
+
+                        // Train original
+                        nn.train(inputs, targets);
+                        processedSamples++;
+
+                        // Train +10° rotation
+                        const rotPlus = rotateImage(inputs, 10);
+                        nn.train(rotPlus, targets);
+                        processedSamples++;
+
+                        // Train -10° rotation
+                        const rotMinus = rotateImage(inputs, -10);
+                        nn.train(rotMinus, targets);
+                        processedSamples++;
+
+                        if (i % 25 === 0) {
+                            const progress = (processedSamples / totalSamples) * 100;
+                            progressFill.style.width = `${progress}%`;
+                            statusText.textContent = `Epoch ${epoch + 1}/${epochs} — Sample ${i + 1}/${shuffled.length}`;
+
+                            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+                            const rate = (processedSamples / parseFloat(elapsed)).toFixed(0);
+                            trainingStats.innerHTML = `
+                                <span class="stat">Elapsed: <span class="stat-value">${elapsed}s</span></span>
+                                <span class="stat">Rate: <span class="stat-value">${rate} samples/s</span></span>
+                                <span class="stat">Progress: <span class="stat-value">${progress.toFixed(1)}%</span></span>
+                            `;
+
+                            await new Promise(resolve => setTimeout(resolve, 0));
+                        }
+                    }
+                }
+
+                progressFill.style.width = '100%';
+                const totalTime = ((performance.now() - startTime) / 1000).toFixed(1);
+                statusText.textContent = `✓ Training complete in ${totalTime}s!`;
+                hasTrainedWeights = true;
+                exportBtn.disabled = false;
+
+                updateNetworkStatus('trained', 'Network trained ✓');
+
+                setTimeout(() => {
+                    statusDiv.classList.remove('show');
+                    trainBtn.disabled = false;
+                }, 3000);
+
+            } catch (error) {
+                statusText.textContent = `Error: ${error.message}`;
+                trainBtn.disabled = false;
+                updateNetworkStatus('untrained', 'Training failed');
+            }
+        });
+
+        // ============= EXPORT =============
+        document.getElementById('export').addEventListener('click', () => {
+            const weights = nn.exportWeights();
+            const blob = new Blob([JSON.stringify(weights)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'weights.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // ============= STATUS HELPERS =============
+        function updateNetworkStatus(state, text) {
+            const el = document.getElementById('network-status');
+            const label = document.getElementById('status-label');
+            const dot = el.querySelector('.status-dot');
+
+            el.className = 'network-status ' + state;
+            label.textContent = text;
+
+            if (state === 'loading') {
+                dot.classList.add('pulse');
+            } else {
+                dot.classList.remove('pulse');
+            }
+        }
+
+        function initBars() {
+            const barsContainer = document.getElementById('bars');
+            barsContainer.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const row = document.createElement('div');
+                row.className = 'bar-row';
+                row.innerHTML = `
+                    <div class="bar-label">${i}</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="bar-value">0.0%</div>
+                `;
+                barsContainer.appendChild(row);
+            }
+        }
+
+        // ============= LOAD PRE-TRAINED WEIGHTS =============
+        async function loadPretrainedWeights() {
+            updateNetworkStatus('loading', 'Loading weights...');
+            try {
+                if (typeof pretrainedWeights !== 'undefined') {
+                    nn.loadWeights(pretrainedWeights.Wih, pretrainedWeights.Who);
+                    hasTrainedWeights = true;
+                    document.getElementById('export').disabled = false;
+                    updateNetworkStatus('trained', 'Pre-trained weights loaded ✓');
+                } else {
+                    const response = await fetch('weights.json');
+                    if (!response.ok) throw new Error('No weights file');
+                    const weights = await response.json();
+                    nn.loadWeights(weights.Wih, weights.Who);
+                    hasTrainedWeights = true;
+                    document.getElementById('export').disabled = false;
+                    updateNetworkStatus('trained', 'Pre-trained weights loaded ✓');
+                }
+            } catch (e) {
+                console.log('No pre-trained weights found, using random initialization. Train the network or run export_weights.py to generate weights.json');
+                updateNetworkStatus('untrained', 'No weights — Click "Re-train" or draw');
+            }
+        }
+
+        // ============= INIT =============
+        initBars();
+        loadPretrainedWeights();
+    </script>
+</body>
+
+</html>
